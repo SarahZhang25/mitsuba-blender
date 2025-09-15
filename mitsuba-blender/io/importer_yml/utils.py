@@ -99,6 +99,8 @@ def create_material(mat_cfg):
             tex_image.location = (-400, 0)
             tex_image.image = bpy.data.images.load(mat_cfg["texture"]["filepath"])
             links.new(tex_image.outputs["Color"], bsdf.inputs["Base Color"])
+            if "optimizable" in mat_cfg["texture"]:
+                optimizable = mat_cfg["texture"]["optimizable"]
     else:
         raise ValueError(f"Unknown material configuration: {mat_cfg}")
 

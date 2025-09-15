@@ -202,8 +202,44 @@ class ExportMitsuba(bpy.types.Operator, ExportHelper):
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
-class ExportMitsubaExtended(ExportMitsuba):
+class ExportMitsubaExtended(bpy.types.Operator, ExportHelper):
     """Export the Mitsuba scene with auxiliary data"""
+    bl_idname = "export_scene.mitsuba"
+    bl_label = "Mitsuba Export"
+
+    filename_ext = ".xml"
+    filter_glob: StringProperty(default="*.xml", options={'HIDDEN'})
+
+    use_selection: BoolProperty(
+	        name = "Selection Only",
+	        description="Export selected objects only",
+	        default = False,
+	    )
+
+    split_files: BoolProperty(
+            name = "Split File",
+            description = "Split scene XML file in smaller fragments",
+            default = False
+    )
+
+    export_ids: BoolProperty(
+            name = "Export IDs",
+            description = "Add an 'id' field for each object (shape, emitter, camera...)",
+            default = False
+    )
+
+    ignore_background: BoolProperty(
+            name = "Ignore Default Background",
+            description = "Ignore blender's default constant gray background when exporting to Mitsuba.",
+            default = True
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reset()
+
+    def reset(self):
+        self.converter = exporter.SceneConverter()
 
     def execute(self, context):
         # Conversion matrix to shift the "Up" Vector. This can be useful when exporting single objects to an existing mitsuba scene.
@@ -229,17 +265,18 @@ class ExportMitsubaExtended(ExportMitsuba):
         window_manager.progress_begin(0, total_progress)
 
         self.converter.scene_to_dict(deps_graph, window_manager)
-        # Write data to scene .xml file
+        #write data to scene .xml file
         self.converter.dict_to_xml()
 
         window_manager.progress_end()
 
         self.report({'INFO'}, "Scene exported successfully!")
 
-        # Reset the exporter
+        #reset the exporter
         self.reset()
 
         return {'FINISHED'}
+
 
 
 def menu_export_func(self, context):

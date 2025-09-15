@@ -2,6 +2,8 @@
 from . import utils
 import bpy
 
+
+OPTIMIZABLE_MATERIALS = {} # Global dict to store optimizable materials by name?
 def build_new_scene(init_scene, config_path="scene_config.yml"):
     """Assemble blender scene from config file."""
     bpy.context.window.scene = init_scene
