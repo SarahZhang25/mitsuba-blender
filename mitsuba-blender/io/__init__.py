@@ -4,6 +4,8 @@ if "bpy" in locals():
         importlib.reload(bl_utils)
     if "importer" in locals():
         importlib.reload(importer)
+    if "importer_yml" in locals():
+        importlib.reload(importer_yml)
     if "exporter" in locals():
         importlib.reload(exporter)
 
@@ -21,7 +23,9 @@ from bpy_extras.io_utils import (
 
 from . import bl_utils
 from . import importer
+from . import importer_yml
 from . import exporter
+
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ImportMistuba(bpy.types.Operator, ImportHelper):
@@ -62,6 +66,55 @@ class ImportMistuba(bpy.types.Operator, ImportHelper):
         except (RuntimeError, NotImplementedError) as e:
             print(e)
             self.report({'ERROR'}, "Failed to load Mitsuba scene. See error log.")
+            return {'CANCELLED'}
+
+        bpy.context.window.scene = scene
+
+        self.report({'INFO'}, "Scene imported successfully.")
+
+        return {'FINISHED'}
+
+
+@orientation_helper(axis_forward='-Z', axis_up='Y')
+class ImportCustomConfig(bpy.types.Operator, ImportHelper):
+    """Import a custom scene"""
+    bl_idname = "import_scene.mitsuba"
+    bl_label = "Custom YML Config Import"
+
+    filename_ext = ".yml"
+    filter_glob: StringProperty(default="*.yml", options={'HIDDEN'})
+
+    override_scene: BoolProperty(
+        name = 'Override Current Scene',
+        description = 'Override the current scene with the imported Mitsuba scene. '
+                      'Otherwise, creates a new scene for Mitsuba objects.',
+        default = True,
+    )
+
+    def execute(self, context):
+        # Set blender to object mode
+        if bpy.ops.object.mode_set.poll():
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        # axis_mat = axis_conversion(
+        #     to_forward=self.axis_forward,
+        #     to_up=self.axis_up,
+        # ).to_4x4()
+
+        if self.override_scene:
+            # Clear the current scene
+            scene = bl_utils.init_empty_scene(context, name=bpy.context.scene.name)
+        else:
+            # Create a new scene for Mitsuba objects
+            scene = bl_utils.init_empty_scene(context, name='Mitsuba')
+        # collection = scene.collection
+
+        try:
+            importer_yml.build_new_scene(scene, self.filepath)
+            # importer.load_mitsuba_scene(context, scene, collection, self.filepath, axis_mat)
+        except (RuntimeError, NotImplementedError) as e:
+            print(e)
+            self.report({'ERROR'}, "Failed to load scene from config. See error log.")
             return {'CANCELLED'}
 
         bpy.context.window.scene = scene
@@ -135,14 +188,55 @@ class ExportMitsuba(bpy.types.Operator, ExportHelper):
         window_manager.progress_begin(0, total_progress)
 
         self.converter.scene_to_dict(deps_graph, window_manager)
-        #write data to scene .xml file
+        # Write data to scene .xml file
         self.converter.dict_to_xml()
 
         window_manager.progress_end()
 
         self.report({'INFO'}, "Scene exported successfully!")
 
-        #reset the exporter
+        # Reset the exporter
+        self.reset()
+
+        return {'FINISHED'}
+
+
+@orientation_helper(axis_forward='-Z', axis_up='Y')
+class ExportMitsubaExtended(ExportMitsuba):
+    """Export the Mitsuba scene with auxiliary data"""
+
+    def execute(self, context):
+        # Conversion matrix to shift the "Up" Vector. This can be useful when exporting single objects to an existing mitsuba scene.
+        axis_mat = axis_conversion(
+	            to_forward=self.axis_forward,
+	            to_up=self.axis_up,
+	        ).to_4x4()
+
+        self.converter.export_ctx.axis_mat = axis_mat
+        # Add IDs to all base plugins (shape, emitter, sensor...)
+        self.converter.export_ctx.export_ids = self.export_ids
+
+        self.converter.use_selection = self.use_selection
+
+        # Set path to scene .xml file
+        self.converter.set_path(self.filepath, split_files=self.split_files)
+
+        window_manager = context.window_manager
+
+        deps_graph = context.evaluated_depsgraph_get()
+
+        total_progress = len(deps_graph.object_instances)
+        window_manager.progress_begin(0, total_progress)
+
+        self.converter.scene_to_dict(deps_graph, window_manager)
+        # Write data to scene .xml file
+        self.converter.dict_to_xml()
+
+        window_manager.progress_end()
+
+        self.report({'INFO'}, "Scene exported successfully!")
+
+        # Reset the exporter
         self.reset()
 
         return {'FINISHED'}
@@ -151,13 +245,21 @@ class ExportMitsuba(bpy.types.Operator, ExportHelper):
 def menu_export_func(self, context):
     self.layout.operator(ExportMitsuba.bl_idname, text="Mitsuba (.xml)")
 
+def menu_custom_export_func(self, context):
+    self.layout.operator(ExportMitsubaExtended.bl_idname, text="Mitsuba Custom (.???)")
+
 def menu_import_func(self, context):
     self.layout.operator(ImportMistuba.bl_idname, text="Mitsuba (.xml)")
+
+def menu_yml_import_func(self, context):
+    self.layout.operator(ImportMistuba.bl_idname, text="Custom Config (.yml)")
 
 
 classes = (
     ImportMistuba,
-    ExportMitsuba
+    ImportCustomConfig,
+    ExportMitsuba,
+    ExportMitsubaExtended
 )
 
 def register():
@@ -165,11 +267,15 @@ def register():
         bpy.utils.register_class(cls)
 
     bpy.types.TOPBAR_MT_file_export.append(menu_export_func)
+    bpy.types.TOPBAR_MT_file_export.append(menu_custom_export_func)
     bpy.types.TOPBAR_MT_file_import.append(menu_import_func)
+    bpy.types.TOPBAR_MT_file_import.append(menu_yml_import_func)
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
     bpy.types.TOPBAR_MT_file_export.remove(menu_export_func)
+    bpy.types.TOPBAR_MT_file_export.append(menu_custom_export_func)
     bpy.types.TOPBAR_MT_file_import.remove(menu_import_func)
+    bpy.types.TOPBAR_MT_file_import.append(menu_yml_import_func)

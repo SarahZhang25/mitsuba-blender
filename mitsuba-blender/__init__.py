@@ -2,7 +2,7 @@ bl_info = {
     'name': 'Mitsuba-Blender',
     'author': 'Baptiste Nicolet, Dorian Ros, Rami Tabbara',
     'version': (0, 1),
-    'blender': (2, 93, 0),
+    'blender': (4, 0, 0),
     'category': 'Render',
     'location': 'File menu, render engine menu',
     'description': 'Mitsuba integration for Blender',
@@ -19,11 +19,26 @@ from bpy.utils import register_class, unregister_class
 import os
 import sys
 import subprocess
+import logging
+import importlib
 
 from . import io, engine
 
 DEPS_MITSUBA_VERSION = '3.5.0'
 
+# We will install add-on dependencies to this "deps" folder and add it to the sys.path
+ADDON_DIR = os.path.dirname(__file__)
+DEPS_PATH = os.path.join(ADDON_DIR, "deps")
+if DEPS_PATH not in sys.path:
+    sys.path.insert(0, DEPS_PATH)
+
+
+def ensure_module(module_name):
+    """Check if module exists, install it into deps if missing."""
+    if importlib.util.find_spec(module_name) is None:
+        subprocess.run([sys.executable, "-m", "pip", "install", pip_name, "--target", DEPS_PATH])
+
+    
 def get_addon_preferences(context):
     return context.preferences.addons[__name__].preferences
 
@@ -105,21 +120,31 @@ def ensure_pip():
     result = subprocess.run([sys.executable, '-m', 'ensurepip'], capture_output=True)
     return result.returncode == 0
 
-def check_pip_dependencies(context):
+def check_pip_dependencies(context, requirements):
+    """Check if the required pip dependencies are installed.
+
+    Args:
+        context: Blender context
+        requirements: List of requirements to check (i.e. read from extra_pip_dependencies.txt)
+    """
     prefs = get_addon_preferences(context)
     result = subprocess.run([sys.executable, '-m', 'pip', 'list'], capture_output=True)
+    deps_path_result = subprocess.run([sys.executable, '-m', 'pip', 'list', '--path', DEPS_PATH], capture_output=True)
 
     prefs.has_pip_dependencies = False
     prefs.has_valid_dependencies_version = False
 
-    if result.returncode == 0:
-        output_str = result.stdout.decode('utf-8')
-        lines = output_str.splitlines(keepends=False)
-        for line in lines:
-            parts = line.split()
-            if len(parts) >= 2 and parts[0] == 'mitsuba':
-                prefs.has_pip_dependencies = True
-                prefs.installed_dependencies_version = parts[1]
+    if result.returncode == 0 and deps_path_result.returncode == 0:
+        output_lines = result.stdout.decode('utf-8').splitlines(keepends=False)[2:]  # Skip header lines
+        output_lines += deps_path_result.stdout.decode('utf-8').splitlines(keepends=False)[2:]
+
+        packages = {line.split()[0] : line.split()[1] for line in output_lines}  # Skip header lines
+
+        has_all_requirements = all([req.split('==')[0] in packages for req in requirements])
+        logging.info(f"has all requirements: {has_all_requirements}")
+        if has_all_requirements:
+            prefs.has_pip_dependencies = True
+            prefs.installed_dependencies_version = packages["mitsuba"]
 
 def clean_additional_custom_paths(self, context):
     # Remove old values from system PATH and sys.path
@@ -158,12 +183,26 @@ class MITSUBA_OT_install_pip_dependencies(Operator):
         return not prefs.has_pip_dependencies or not prefs.has_valid_dependencies_version
 
     def execute(self, context):
-        result = subprocess.run([sys.executable, '-m', 'pip', 'install', f'mitsuba=={DEPS_MITSUBA_VERSION}', '--force-reinstall'], capture_output=False)
-        if result.returncode != 0:
-            self.report({'ERROR'}, f'Failed to install Mitsuba with return code {result.returncode}.')
-            return {'CANCELLED'}
+        """Install the required pip dependencies for mitsuba-blender."""
+        with open(os.path.join(os.path.dirname(__file__), 'extra_pip_dependencies.txt'), 'r', encoding='utf-8') as f:
+            requirements = f.read().splitlines()  # format: package==version
+        for req in requirements:
+            result = subprocess.run([
+                sys.executable, '-m','pip', 'install', req, '--force-reinstall',
+                '--target', DEPS_PATH 
+            ], capture_output=False, check=True)
 
-        check_pip_dependencies(context)
+            if result.returncode != 0:
+                self.report({'ERROR'}, f'Failed to install {req} with return code {result.returncode}.')
+                return {'CANCELLED'}
+
+        # result = subprocess.run([sys.executable, '-m', 'pip', 'install', f'mitsuba=={DEPS_MITSUBA_VERSION}', '--force-reinstall', '--target', DEPS_PATH], capture_output=False)
+        # if result.returncode != 0:
+        #     self.report({'ERROR'}, f'Failed to install Mitsuba with return code {result.returncode}.')
+        #     return {'CANCELLED'}
+
+
+        check_pip_dependencies(context, requirements)
 
         try_reload_mitsuba(context)
 
@@ -293,11 +332,13 @@ def register():
     context = bpy.context
     prefs = get_addon_preferences(context)
     prefs.require_restart = False
-
     if not ensure_pip():
         raise RuntimeError('Cannot activate mitsuba-blender add-on. Python pip module cannot be initialized.')
 
-    check_pip_dependencies(context)
+    with open(os.path.join(os.path.dirname(__file__), 'extra_pip_dependencies.txt'), 'r', encoding='utf-8') as f:
+        requirements = f.read().splitlines()  # format: package==version
+    check_pip_dependencies(context, requirements)
+
     if try_register_mitsuba(context):
         import mitsuba
         print(f'mitsuba-blender v{".".join(str(e) for e in bl_info["version"])}{bl_info["warning"] if "warning" in bl_info else ""} registered (with mitsuba v{mitsuba.__version__})')
