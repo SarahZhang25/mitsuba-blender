@@ -100,7 +100,9 @@ def create_material(mat_cfg):
             tex_image.image = bpy.data.images.load(mat_cfg["texture"]["filepath"])
             links.new(tex_image.outputs["Color"], bsdf.inputs["Base Color"])
             if "optimizable" in mat_cfg["texture"]:
-                optimizable = mat_cfg["texture"]["optimizable"]
+                mat["optimizable"] = mat_cfg["texture"]["optimizable"]
+            else:
+                mat["optimizable"] = False
     else:
         raise ValueError(f"Unknown material configuration: {mat_cfg}")
 
@@ -121,6 +123,8 @@ def setup_objects(scene, cfg):
                 location=obj_cfg.get("location", (0, 0, 0)),
             )
         obj = bpy.context.active_object
+        if "name" in obj_cfg:
+            obj.name = obj_cfg["name"]
         # scene.collection.objects.link(obj)
 
         # Assign material

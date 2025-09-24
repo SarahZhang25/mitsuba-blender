@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 
 if "bpy" in locals():
     import importlib
@@ -26,12 +27,16 @@ class SceneConverter:
     Converts a blender scene to a Mitsuba-compatible dict.
     Either save it as an XML or load it as a scene.
     '''
-    def __init__(self, render=False):
+    def __init__(self, render=False, include_auxiliary_output=False):
         self.export_ctx = export_context.ExportContext()
         self.use_selection = False # Only export selection
         self.ignore_background = True
         self.render = render
 
+        self.include_auxiliary_output = include_auxiliary_output # Whether to include auxiliary outputs in the XML file
+        self.auxiliary_output_dict = {} # For auxiliary outputs like optimizable textures
+        self.auxiliary_output_dict["texture_optimization"] = set()
+        
     def set_path(self, name, split_files=False):
         from mitsuba.python.xml import WriteXML
         # Ideally, this should only be created if we want to write a scene.
@@ -94,7 +99,10 @@ class SceneConverter:
                 self.export_ctx.log("Object: {} is hidden for render. Ignoring it.".format(evaluated_obj.name), 'INFO')
                 continue#ignore it since we don't want it rendered (TODO: hide_viewport)
             if object_type in {'MESH', 'FONT', 'SURFACE', 'META'}:
-                geometry.export_object(object_instance, self.export_ctx, evaluated_obj.name in particles)
+                if self.include_auxiliary_output:
+                    geometry.export_object(object_instance, self.export_ctx, evaluated_obj.name in particles, self.auxiliary_output_dict["texture_optimization"])
+                else:
+                    geometry.export_object(object_instance, self.export_ctx, evaluated_obj.name in particles)
             elif object_type == 'CAMERA':
                 # When rendering inside blender, export only the active camera
                 if (self.render and evaluated_obj.name_full == b_scene.camera.name_full) or not self.render:
@@ -106,6 +114,15 @@ class SceneConverter:
 
     def dict_to_xml(self):
         self.xml_writer.process(self.export_ctx.scene_data)
+
+    def aux_dict_to_yml(self):
+        import yaml
+        aux_path = os.path.join(self.export_ctx.directory, "auxiliary_outputs.yml")
+        # convert to standard dict
+        self.auxiliary_output_dict = {k: list(v) if isinstance(v, set) else v for k, v in self.auxiliary_output_dict.items()}
+
+        with open(aux_path, 'w') as f:
+            yaml.dump(self.auxiliary_output_dict, f)
 
     def dict_to_scene(self):
         from mitsuba import load_dict

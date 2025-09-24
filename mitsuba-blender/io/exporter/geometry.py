@@ -2,7 +2,7 @@ import os
 import bpy
 
 from .materials import export_material
-from .export_context import Files
+# from .export_context import Files, ExportContext
 
 
 def convert_mesh(export_ctx, b_mesh, matrix_world, name, mat_nr):
@@ -97,9 +97,15 @@ def convert_mesh(export_ctx, b_mesh, matrix_world, name, mat_nr):
     return load_dict(props)
 
 
-def export_object(deg_instance, export_ctx, is_particle):
+def export_object(deg_instance, export_ctx, is_particle, auxiliary_output_dict=None):
     """
     Convert a blender object to mitsuba and save it as Binary PLY
+
+    Args:
+        deg_instance: The object instance from the dependency graph
+        export_ctx:   The export context
+        is_particle:  Whether this object is a particle instance
+        auxiliary_output_dict: Dictionary to store auxiliary outputs like optimizable textures
     """
 
     b_object = deg_instance.object
@@ -204,10 +210,15 @@ def export_object(deg_instance, export_ctx, is_particle):
                 mat_id = f"mat-{b_object.data.materials[mat_nr].name}"
                 if export_ctx.exported_mats.has_mat(mat_id): # Add one emitter *and* one bsdf
                     mixed_mat = export_ctx.exported_mats.mats[mat_id]
-                    params['bsdf'] = {'type':'ref', 'id':mixed_mat['bsdf']}
+                    params['bsdf'] = {'type': 'ref', 'id': mixed_mat['bsdf']}
                     params['emitter'] = mixed_mat['emitter']
                 else:
-                    params['bsdf'] = {'type':'ref', 'id':mat_id}
+                    params['bsdf'] = {'type': 'ref', 'id': mat_id}
+
+                if auxiliary_output_dict is not None:
+                    optimizable_flag = b_object.data.materials[mat_nr].get("optimizable", False)
+                    if optimizable_flag:
+                        auxiliary_output_dict.add(mat_id)
 
             # Add dict to the scene dict
             if use_shapegroup:

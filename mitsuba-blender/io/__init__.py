@@ -77,8 +77,8 @@ class ImportMistuba(bpy.types.Operator, ImportHelper):
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ImportCustomConfig(bpy.types.Operator, ImportHelper):
-    """Import a custom scene"""
-    bl_idname = "import_scene.mitsuba"
+    """Import a custom yml-description scene"""
+    bl_idname = "import_scene_yml_config.mitsuba"
     bl_label = "Custom YML Config Import"
 
     filename_ext = ".yml"
@@ -204,8 +204,8 @@ class ExportMitsuba(bpy.types.Operator, ExportHelper):
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ExportMitsubaExtended(bpy.types.Operator, ExportHelper):
     """Export the Mitsuba scene with auxiliary data"""
-    bl_idname = "export_scene.mitsuba"
-    bl_label = "Mitsuba Export"
+    bl_idname = "export_scene_for_optimization.mitsuba"
+    bl_label = "Mitsuba Export For Optimization"
 
     filename_ext = ".xml"
     filter_glob: StringProperty(default="*.xml", options={'HIDDEN'})
@@ -225,7 +225,7 @@ class ExportMitsubaExtended(bpy.types.Operator, ExportHelper):
     export_ids: BoolProperty(
             name = "Export IDs",
             description = "Add an 'id' field for each object (shape, emitter, camera...)",
-            default = False
+            default = True
     )
 
     ignore_background: BoolProperty(
@@ -239,7 +239,7 @@ class ExportMitsubaExtended(bpy.types.Operator, ExportHelper):
         self.reset()
 
     def reset(self):
-        self.converter = exporter.SceneConverter()
+        self.converter = exporter.SceneConverter(include_auxiliary_output=True)
 
     def execute(self, context):
         # Conversion matrix to shift the "Up" Vector. This can be useful when exporting single objects to an existing mitsuba scene.
@@ -265,14 +265,16 @@ class ExportMitsubaExtended(bpy.types.Operator, ExportHelper):
         window_manager.progress_begin(0, total_progress)
 
         self.converter.scene_to_dict(deps_graph, window_manager)
-        #write data to scene .xml file
+        # Write data to scene .xml file
         self.converter.dict_to_xml()
+        # Write auxiliary output data to .yml file
+        self.converter.aux_dict_to_yml()
 
         window_manager.progress_end()
 
         self.report({'INFO'}, "Scene exported successfully!")
 
-        #reset the exporter
+        # Reset the exporter
         self.reset()
 
         return {'FINISHED'}
@@ -283,13 +285,13 @@ def menu_export_func(self, context):
     self.layout.operator(ExportMitsuba.bl_idname, text="Mitsuba (.xml)")
 
 def menu_custom_export_func(self, context):
-    self.layout.operator(ExportMitsubaExtended.bl_idname, text="Mitsuba Custom (.???)")
+    self.layout.operator(ExportMitsubaExtended.bl_idname, text="Mitsuba (.yml) with Aux Data (.xml)")
 
 def menu_import_func(self, context):
     self.layout.operator(ImportMistuba.bl_idname, text="Mitsuba (.xml)")
 
 def menu_yml_import_func(self, context):
-    self.layout.operator(ImportMistuba.bl_idname, text="Custom Config (.yml)")
+    self.layout.operator(ImportCustomConfig.bl_idname, text="Custom Config (.yml)")
 
 
 classes = (
