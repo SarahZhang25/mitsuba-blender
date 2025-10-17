@@ -285,7 +285,7 @@ def menu_export_func(self, context):
     self.layout.operator(ExportMitsuba.bl_idname, text="Mitsuba (.xml)")
 
 def menu_custom_export_func(self, context):
-    self.layout.operator(ExportMitsubaExtended.bl_idname, text="Mitsuba (.yml) with Aux Data (.xml)")
+    self.layout.operator(ExportMitsubaExtended.bl_idname, text="Mitsuba (.xml) with Aux Data (.yml)")
 
 def menu_import_func(self, context):
     self.layout.operator(ImportMistuba.bl_idname, text="Mitsuba (.xml)")
