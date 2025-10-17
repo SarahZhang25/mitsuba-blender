@@ -16,15 +16,21 @@ def setup_render(scene, cfg):
     scene.render.resolution_y = cfg["render"]["resolution_y"]
 
 
-def setup_camera(scene, cfg):
+def setup_cameras(scene, cfg):
     """Set up camera based on configuration."""
-    cam = scene.objects.get("Camera")
-    # cam = bpy.data.objects.get("Camera")
-    if cam is None:
+    for cam_cfg in cfg.get("camera", []):
         bpy.ops.object.camera_add()
         cam = bpy.context.active_object
-    cam.location = cfg["camera"]["location"]
-    cam.rotation_euler = cfg["camera"]["rotation_euler"]
+
+        cam.location = cam_cfg["location"]
+        cam.rotation_euler = cam_cfg["rotation_euler"]
+        if "name" in cam_cfg:
+            cam.name = cam_cfg["name"]
+            cam.data.name = cam_cfg["name"]
+        if "optimizable" in cam_cfg:
+            cam["optimizable"] = cam_cfg["optimizable"]
+        else:
+            cam["optimizable"] = True # default to allowing optimization with this viewpoint
 
 
 def setup_background(scene, config):
@@ -112,23 +118,84 @@ def create_material(mat_cfg):
 def setup_objects(scene, cfg):
     """Add objects to the scene based on configuration."""
     for obj_cfg in cfg.get("objects", []):
-        if obj_cfg["type"] == "CUBE":
-            bpy.ops.mesh.primitive_cube_add(
-                size=obj_cfg.get("size", 1.0),
-                location=obj_cfg.get("location", (0, 0, 0)),
-            )
-        elif obj_cfg["type"] == "SPHERE":
-            bpy.ops.mesh.primitive_uv_sphere_add(
-                radius=obj_cfg.get("radius", 1.0),
-                location=obj_cfg.get("location", (0, 0, 0)),
-            )
+        if obj_cfg["type"] == "PRIMITIVE":
+            if obj_cfg["shape"] == "CUBE":
+                bpy.ops.mesh.primitive_cube_add(
+                    size=obj_cfg.get("size", 1.0),
+                    location=obj_cfg.get("location", (0, 0, 0)),
+                    rotation=obj_cfg.get("rotation", (0, 0, 0)),
+                    # scale=obj_cfg.get("scale", (0, 0, 0)),
+                )
+            elif obj_cfg["shape"] == "SPHERE":
+                bpy.ops.mesh.primitive_uv_sphere_add(
+                    radius=obj_cfg.get("radius", 1.0),
+                    location=obj_cfg.get("location", (0, 0, 0)),
+                    rotation=obj_cfg.get("rotation", (0, 0, 0)),
+                    # scale=obj_cfg.get("scale", (0, 0, 0)),
+                )
+            else:
+                raise ValueError(f"Unknown shape type {obj_cfg['shape']}, expected one of CUBE, SPHERE.")
+            #TODO: add other primitives: total available are
+            # primitive_circle_add()
+            # primitive_cone_add()
+            # primitive_cube_add() -- done
+            # primitive_cube_add_gizmo()
+            # primitive_cylinder_add()
+            # primitive_grid_add()
+            # primitive_ico_sphere_add()
+            # primitive_monkey_add()
+            # primitive_plane_add()
+            # primitive_torus_add()
+            # primitive_uv_sphere_add() -- done
+
+        elif obj_cfg["type"] == "MESH":
+            mesh_filepath = obj_cfg["filepath"]
+            file_ending = mesh_filepath.split(".")[-1]
+            if file_ending == "obj":
+                bpy.ops.wm.obj_import(filepath=mesh_filepath)
+            elif file_ending == "stl":
+                bpy.ops.wm.stl_import(filepath=mesh_filepath)
+            elif file_ending == "ply":
+                bpy.ops.wm.ply_import(filepath=mesh_filepath)
+            elif file_ending == "fbx":
+                # bpy.ops.wm.fbx_import(filepath=mesh_filepath)
+                bpy.ops.import_scene.fbx(filepath=mesh_filepath)
+            else:
+                raise ValueError(f"Unknown file ending type {file_ending}, expected one of 'obj', 'stl', 'ply', 'fbx")
+
+        # Adjust pose and scaling for non-primitive objects
         obj = bpy.context.active_object
+        if obj_cfg["type"] != "PRIMITIVE":
+            if "location" in obj_cfg:
+                obj.location = obj_cfg["location"]
+            if "rotation_euler" in obj_cfg:
+                obj.rotation_euler = obj_cfg["rotation_euler"]
+            # Scale: prefer explicit 3-element scale, else uniform `size` if provided
+            if "scale" in obj_cfg:
+                obj.scale = obj_cfg["scale"]
+            elif "size" in obj_cfg:
+                s = obj_cfg["size"]
+                obj.scale = (s, s, s)
+
         if "name" in obj_cfg:
             obj.name = obj_cfg["name"]
-        # scene.collection.objects.link(obj)
 
         # Assign material
-        if "material" in obj_cfg:
+        if "material" in obj_cfg and obj.data is not None:
             mat = create_material(obj_cfg["material"])
             obj.data.materials.clear()
             obj.data.materials.append(mat)
+
+
+            # ensure UV map exists
+            mesh = obj.data
+            if not mesh.uv_layers:
+                # add uv layer
+                mesh.uv_layers.new(name="UVMap")
+
+            # unwrap automatically bitmap
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.uv.smart_project()
+            bpy.ops.object.mode_set(mode='OBJECT')

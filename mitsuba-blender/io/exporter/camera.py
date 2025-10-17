@@ -2,7 +2,7 @@ from mathutils import Matrix
 import numpy as np
 from math import degrees
 
-def export_camera(camera_instance, b_scene, export_ctx):
+def export_camera(camera_instance, b_scene, export_ctx, auxiliary_output_dict = None, index = 0):
     #camera
     b_camera = camera_instance.object#TODO: instances here too?
     params = {}
@@ -32,7 +32,7 @@ def export_camera(camera_instance, b_scene, export_ctx):
     params['near_clip'] = b_camera.data.clip_start
     params['far_clip'] = b_camera.data.clip_end
     #TODO: check that distance units are consistent everywhere (e.g. mm everywhere)
-    #TODO enable focus thin lens / cam.dof
+    #TODO: enable focus thin lens / cam.dof
 
     init_rot = Matrix.Rotation(np.pi, 4, 'Y')
     params['to_world'] = export_ctx.transform_matrix(b_camera.matrix_world @ init_rot)
@@ -65,6 +65,11 @@ def export_camera(camera_instance, b_scene, export_ctx):
             film['rfilter'] = {'type' : 'box'}
 
     params['film'] = film
+
+    if auxiliary_output_dict is not None:
+        optimizable_flag = b_camera.get("optimizable", False)
+        if optimizable_flag:
+            auxiliary_output_dict.append(index)
 
     if export_ctx.export_ids:
         export_ctx.data_add(params, name=b_camera.name_full)

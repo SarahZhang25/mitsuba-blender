@@ -34,8 +34,10 @@ class SceneConverter:
         self.render = render
 
         self.include_auxiliary_output = include_auxiliary_output # Whether to include auxiliary outputs in the XML file
-        self.auxiliary_output_dict = {} # For auxiliary outputs like optimizable textures
-        self.auxiliary_output_dict["texture_optimization"] = set()
+        self.auxiliary_output_dict = {
+            "texture_optimization": set(),
+            "sensor_indices_for_optimization": []
+        }
         
     def set_path(self, name, split_files=False):
         from mitsuba.python.xml import WriteXML
@@ -78,6 +80,7 @@ class SceneConverter:
                     particles.append(obj.name)
 
         progress_counter = 0
+        camera_counter = 0
         # Main export loop
         for object_instance in depsgraph.object_instances:
             window_manager.progress_update(progress_counter)
@@ -104,9 +107,15 @@ class SceneConverter:
                 else:
                     geometry.export_object(object_instance, self.export_ctx, evaluated_obj.name in particles)
             elif object_type == 'CAMERA':
-                # When rendering inside blender, export only the active camera
+                # When rendering inside blender, export only the active camera # NOTE: what does this mean
                 if (self.render and evaluated_obj.name_full == b_scene.camera.name_full) or not self.render:
-                    camera.export_camera(object_instance, b_scene, self.export_ctx)
+                    if self.include_auxiliary_output:
+                        camera.export_camera(object_instance, b_scene, self.export_ctx, self.auxiliary_output_dict["sensor_indices_for_optimization"], camera_counter)
+                    else:
+                        camera.export_camera(object_instance, b_scene, self.export_ctx)
+                    camera_counter += 1
+                    
+                # TODO: add auxiliary output to export all cams
             elif object_type == 'LIGHT':
                 lights.export_light(object_instance, self.export_ctx)
             else:

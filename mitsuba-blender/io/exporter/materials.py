@@ -33,11 +33,9 @@ def convert_float_texture_node(export_ctx, socket):
             raise NotImplementedError( "Node type %s is not supported. Only texture nodes are supported for float inputs" % node.type)
 
     else:
-        #roughness values in blender are remapped with a square root
-        if 'Roughness' in socket.name:
-            params = pow(socket.default_value, 2)
-        else:
-            params = socket.default_value
+        #roughness values in blender are remapped with a square root 
+        # NOTE: This doesn't seem to be true anymore; textures look correct only without the squaring
+        params = socket.default_value
 
     return params
 
@@ -340,8 +338,9 @@ cycles_converters = {
 
 def cycles_material_to_dict(export_ctx, node):
     ''' Converting one material from Blender to Mitsuba dict'''
-
+    print("in cycles_material_to_dict...")
     if node.type in cycles_converters:
+        print("node:", node)
         params = cycles_converters[node.type](export_ctx, node)
     else:
         raise NotImplementedError("Node type: %s is not supported in Mitsuba." % node.type)
