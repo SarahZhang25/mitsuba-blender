@@ -338,9 +338,9 @@ cycles_converters = {
 
 def cycles_material_to_dict(export_ctx, node):
     ''' Converting one material from Blender to Mitsuba dict'''
-    print("in cycles_material_to_dict...")
+    # print("in cycles_material_to_dict...")
     if node.type in cycles_converters:
-        print("node:", node)
+        # print("node:", node)
         params = cycles_converters[node.type](export_ctx, node)
     else:
         raise NotImplementedError("Node type: %s is not supported in Mitsuba." % node.type)

@@ -138,7 +138,7 @@ def check_pip_dependencies(context, requirements):
         output_lines = result.stdout.decode('utf-8').splitlines(keepends=False)[2:]  # Skip header lines
         output_lines += deps_path_result.stdout.decode('utf-8').splitlines(keepends=False)[2:]
 
-        packages = {line.split()[0] : line.split()[1] for line in output_lines}  # Skip header lines
+        packages = {line.split()[0] : line.split()[1] for line in output_lines}
 
         has_all_requirements = all([req.split('==')[0] in packages for req in requirements])
         logging.info(f"has all requirements: {has_all_requirements}")
@@ -186,6 +186,8 @@ class MITSUBA_OT_install_pip_dependencies(Operator):
         """Install the required pip dependencies for mitsuba-blender."""
         with open(os.path.join(os.path.dirname(__file__), 'extra_pip_dependencies.txt'), 'r', encoding='utf-8') as f:
             requirements = f.read().splitlines()  # format: package==version
+        requirements.append(f"mitsuba=={DEPS_MITSUBA_VERSION}")
+
         for req in requirements:
             result = subprocess.run([
                 sys.executable, '-m','pip', 'install', req, '--force-reinstall',
@@ -195,12 +197,6 @@ class MITSUBA_OT_install_pip_dependencies(Operator):
             if result.returncode != 0:
                 self.report({'ERROR'}, f'Failed to install {req} with return code {result.returncode}.')
                 return {'CANCELLED'}
-
-        # result = subprocess.run([sys.executable, '-m', 'pip', 'install', f'mitsuba=={DEPS_MITSUBA_VERSION}', '--force-reinstall', '--target', DEPS_PATH], capture_output=False)
-        # if result.returncode != 0:
-        #     self.report({'ERROR'}, f'Failed to install Mitsuba with return code {result.returncode}.')
-        #     return {'CANCELLED'}
-
 
         check_pip_dependencies(context, requirements)
 

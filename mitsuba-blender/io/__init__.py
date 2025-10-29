@@ -96,22 +96,15 @@ class ImportCustomConfig(bpy.types.Operator, ImportHelper):
         if bpy.ops.object.mode_set.poll():
             bpy.ops.object.mode_set(mode='OBJECT')
 
-        # axis_mat = axis_conversion(
-        #     to_forward=self.axis_forward,
-        #     to_up=self.axis_up,
-        # ).to_4x4()
-
         if self.override_scene:
             # Clear the current scene
             scene = bl_utils.init_empty_scene(context, name=bpy.context.scene.name)
         else:
             # Create a new scene for Mitsuba objects
             scene = bl_utils.init_empty_scene(context, name='Mitsuba')
-        # collection = scene.collection
 
         try:
             importer_yml.build_new_scene(scene, self.filepath)
-            # importer.load_mitsuba_scene(context, scene, collection, self.filepath, axis_mat)
         except (RuntimeError, NotImplementedError) as e:
             print(e)
             self.report({'ERROR'}, "Failed to load scene from config. See error log.")

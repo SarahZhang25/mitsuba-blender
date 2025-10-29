@@ -15,12 +15,21 @@ This add-on integrates the Mitsuba renderer into Blender.
 More in-depth information about the features of the add-on are available on the [wiki](https://github.com/mitsuba-renderer/mitsuba-blender/wiki).
 
 ## Installation
+Option 1 (Official Mitsuba-Blender Release [does not contain our custom features]):
+1. Download the latest release from the [release section](https://github.com/mitsuba-renderer/mitsuba-blender/releases).
+2. In Blender, go to **Edit** -> **Preferences** -> **Add-ons**. In top right of menu, select drop down arrow and **Install from disk**.
+3. Select the downloaded ZIP archive.
+4. Find the add-on using the search bar and enable it.
+5. To point the add-on to the Mitsuba dependencies, either click on *Install dependencies using pip* to download the latest package, or check *Use custom Mitsuba path* and browse to your Mitsuba build directory.
 
-- Download the latest release from the [release section](https://github.com/mitsuba-renderer/mitsuba-blender/releases).
-- In Blender, go to **Edit** -> **Preferences** -> **Add-ons** -> **Install**.
-- Select the downloaded ZIP archive.
-- Find the add-on using the search bar and enable it.
-- To point the add-on to the Mitsuba dependencies, either click on *Install dependencies using pip* to download the latest package, or check *Use custom Mitsuba path* and browse to your Mitsuba build directory.
+
+Option 2 (Live Development Installation):
+1. `git clone` the repo to a working directory.
+2. Add the package directory as a symlink to Blender's addons directory. E.g. for MacOS: 
+```ln -s /working/dir/mitsuba-blender/mitsuba-blender /Users/$USER/Library/Application\ Support/Blender/4.2/scripts/addons/```. Note we are linking the `mitsuba-blender` directory inside the repo. Symlinking allows you to make changes to the package and have them immediately reflect after restarting Blender for faster iteration compared to e.g. zipping the `mitsuba-blender` directory and then installing the ZIP file as in Option 1.
+3. Note: Dependencies are installed into the `deps/` folder of this repo and linked to the Blender runtime.
+4. In Blender, go to **Edit** -> **Preferences** -> **Add-ons**, find the add-on and enable it.
+5. To point the add-on to the Mitsuba dependencies, click on *Install dependencies using pip* to download dependencies.
 
 ## Common issues
 
@@ -38,8 +47,8 @@ on LTS versions of blender (`3.6`, `4.2`). We recommend using those whenever
 possible.
 
 # New Custom Features
-## Note: dependency installations
-Additional dependencies are installed into the `deps/` folder of this repo and linked to the Blender runtime
+## Installation
+Use installation Option 2 as described above. 
 
 ## Custom Import: Import YML Configs
 Usage: Menu option `File -> Import -> Custom Config (.yml)`
@@ -85,3 +94,6 @@ On import into the Blender UI, this property is viewable and editable as a custo
 - For cameras: with the camera object selected, click on the  `Object` tab/icon in the right sidebar, scroll down to `Custom Properties` section
 
 If not explicitly defined as optimizable in the config, textures and cameras are left as not optimizable by default in the UI. To add the `optimizable` flag to a texture or camera without the field (e.g. user-added object to the scene), you can add the custom property yourself in the appropriate `Custom Properties` section: click `+ New`, edit the property to have type Boolean and name `optimizable`. This will be preserved upon export.
+
+## Misc
+Run Blender from command line (e.g. `/Applications/Blender.app/Contents/MacOS/blender` on MacOS) to see logging statements.
