@@ -1,35 +1,43 @@
 ![Addon Banner](res/banner.jpg)
 
-# Mitsuba Blender Add-on
+# Mitsuba Blender+ Add-on
 
-[![Nightly Release](https://github.com/mitsuba-renderer/mitsuba-blender/actions/workflows/nightly_release.yml/badge.svg)](https://github.com/mitsuba-renderer/mitsuba-blender/actions/workflows/nightly_release.yml)
-
-This add-on integrates the Mitsuba renderer into Blender.
+This add-on integrates the Mitsuba renderer into Blender with extended features.
 
 ## Main Features
 
-* **Mitsuba scene import**: Import Mitsuba XML scenes in Blender to edit and preview them. Materials are converted to Cycles shader node trees.
+* **Mitsuba scene import**: Import Mitsuba XML scenes and YML scene descriptions in Blender to edit and preview them. Materials are converted to Cycles shader node trees. Mark textures and cameras for use in downstream optimization. 
 
-* **Mitsuba scene export**: Export a Blender scene to a Mitsuba XML scene for rendering.
+* **Mitsuba scene export**: Export a Blender scene to a Mitsuba XML scene for rendering. Optionally export with auxiliary information (e.g. marked textures and cameras) YML file for downstream use.
 
-More in-depth information about the features of the add-on are available on the [wiki](https://github.com/mitsuba-renderer/mitsuba-blender/wiki).
+More in-depth information about the features of the original Mitsuba Blender add-on are available on the [wiki](https://github.com/mitsuba-renderer/mitsuba-blender/wiki). Additional features as part of Mitsuba Blender+ are described in "New Custom Features" section below.
 
 ## Installation
-Option 1 (Official Mitsuba-Blender Release [does not contain our custom features]):
-1. Download the latest release from the [release section](https://github.com/mitsuba-renderer/mitsuba-blender/releases).
+
+Mitsuba-Blender+ (Live Development Installation):
+1. `git clone` the repo to a working directory.
+2. Add the package directory as a symlink to Blender's addons directory. NOTE: we are linking the `mitsuba-blender` directory *inside* the project root, not the whole repo. Symlinking allows us to make changes to the package and have them immediately reflect after restarting Blender for faster iteration. Blender's third-party(user installed) add-ons are stored in [these locations](https://blender.stackexchange.com/a/293148):
+
+Windows: `%appdata%\Blender Foundation\Blender\4.2\scripts\addons\`
+
+Linux: `$HOME/.config/blender/4.2/scripts/addons/`
+
+Mac OS: `/Users/$USER/Library/Application Support/Blender/4.2/scripts/addons/` 
+
+3. In Blender, go to **Edit** -> **Preferences** -> **Add-ons**, find the add-on and enable it.
+4. To point the add-on to the Mitsuba dependencies, click on *Install dependencies using pip* to download dependencies.
+
+If you'd instead like to install the package directly into Blender's add-ons directory instead of as in Step 2, you can zipping the `mitsuba-blender` directory (NOTE: again, the `mitsuba-blender` directory *inside* the project root, not the whole repo) and then installing the ZIP file as described in steps 2-3 of the Official Mitsuba-Blender Release below.  
+
+
+Official Mitsuba-Blender Release [does not contain our custom features]):
+1. Download the latest release from the [release section](https://github.com/mitsuba-renderer/mitsuba-blender/releases). (![Mitsuba Blender Nightly Release](https://github.com/mitsuba-renderer/mitsuba-blender/actions/workflows/nightly_release.yml/badge.svg)](https://github.com/mitsuba-renderer/mitsuba-blender/actions/workflows/nightly_release.yml))
+
 2. In Blender, go to **Edit** -> **Preferences** -> **Add-ons**. In top right of menu, select drop down arrow and **Install from disk**.
 3. Select the downloaded ZIP archive.
 4. Find the add-on using the search bar and enable it.
 5. To point the add-on to the Mitsuba dependencies, either click on *Install dependencies using pip* to download the latest package, or check *Use custom Mitsuba path* and browse to your Mitsuba build directory.
 
-
-Option 2 (Live Development Installation):
-1. `git clone` the repo to a working directory.
-2. Add the package directory as a symlink to Blender's addons directory. E.g. for MacOS: 
-```ln -s /working/dir/mitsuba-blender/mitsuba-blender /Users/$USER/Library/Application\ Support/Blender/4.2/scripts/addons/```. Note we are linking the `mitsuba-blender` directory inside the repo. Symlinking allows you to make changes to the package and have them immediately reflect after restarting Blender for faster iteration compared to e.g. zipping the `mitsuba-blender` directory and then installing the ZIP file as in Option 1.
-3. Note: Dependencies are installed into the `deps/` folder of this repo and linked to the Blender runtime.
-4. In Blender, go to **Edit** -> **Preferences** -> **Add-ons**, find the add-on and enable it.
-5. To point the add-on to the Mitsuba dependencies, click on *Install dependencies using pip* to download dependencies.
 
 ## Common issues
 
@@ -40,15 +48,17 @@ Option 2 (Live Development Installation):
 
 You can refer to the [Installation & Update Guide](https://github.com/mitsuba-renderer/mitsuba-blender/wiki/Installation-&-Update-Guide) on the wiki for more detailed instructions.
 
+Launch Blender from the console in order to see any logged error messages. 
+
 ### Supported versions
 
 Blender version should be at least `2.93`. The addon has been extensively tested
-on LTS versions of blender (`3.6`, `4.2`). We recommend using those whenever
+on LTS versions of blender (`3.6`, `4.2`). We recommend using 4.2 whenever
 possible.
 
 # New Custom Features
 ## Installation
-Use installation Option 2 as described above. 
+Follow the Mitsuba-Blender+ (Live Development Installation) instructions above.
 
 ## Custom Import: Import YML Configs
 Usage: Menu option `File -> Import -> Custom Config (.yml)`
