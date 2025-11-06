@@ -1,13 +1,37 @@
 """Utils for parsing configuration files and setting up Blender scenes."""
 
 import bpy
+import os
+
+
+def resolve_relative_filepaths(data, base_dir):
+    """
+    Recursively resolve any 'filepath' keys in a nested dict
+    to absolute paths relative to base_dir.
+    """
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == "filepath" and isinstance(value, str):
+                # Make relative to YAML directory
+                abs_path = os.path.normpath(os.path.join(base_dir, value))
+                data[key] = abs_path
+            else:
+                resolve_relative_filepaths(value, base_dir)
+    elif isinstance(data, list):
+        for item in data:
+            resolve_relative_filepaths(item, base_dir)
 
 
 def load_config(path="scene_config.yml"):
     """Load configuration from a YAML file."""
     import yaml
+    base_dir = os.path.dirname(os.path.abspath(path))
     with open(path, "r") as f:
-        return yaml.safe_load(f)
+        config_data = yaml.safe_load(f)
+
+    resolve_relative_filepaths(config_data, base_dir)
+
+    return config_data
 
 
 def setup_render(scene, cfg):
