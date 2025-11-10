@@ -76,9 +76,9 @@ class ImportMistuba(bpy.types.Operator, ImportHelper):
 
 
 @orientation_helper(axis_forward='-Z', axis_up='Y')
-class ImportCustomConfig(bpy.types.Operator, ImportHelper):
+class ImportYMLConfig(bpy.types.Operator, ImportHelper):
     """Import a custom yml-description scene"""
-    bl_idname = "import_scene_yml_config.mitsuba"
+    bl_idname = "import_scene.custom_yml"
     bl_label = "Custom YML Config Import"
 
     filename_ext = ".yml"
@@ -197,7 +197,7 @@ class ExportMitsuba(bpy.types.Operator, ExportHelper):
 @orientation_helper(axis_forward='-Z', axis_up='Y')
 class ExportMitsubaExtended(bpy.types.Operator, ExportHelper):
     """Export the Mitsuba scene with auxiliary data"""
-    bl_idname = "export_scene_for_optimization.mitsuba"
+    bl_idname = "export_scene.mitsuba_optimization"
     bl_label = "Mitsuba Export For Optimization"
 
     filename_ext = ".xml"
@@ -284,12 +284,12 @@ def menu_import_func(self, context):
     self.layout.operator(ImportMistuba.bl_idname, text="Mitsuba (.xml)")
 
 def menu_yml_import_func(self, context):
-    self.layout.operator(ImportCustomConfig.bl_idname, text="Custom Config (.yml)")
+    self.layout.operator(ImportYMLConfig.bl_idname, text="Custom Config (.yml)")
 
 
 classes = (
     ImportMistuba,
-    ImportCustomConfig,
+    ImportYMLConfig,
     ExportMitsuba,
     ExportMitsubaExtended
 )
