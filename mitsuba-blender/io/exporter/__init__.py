@@ -1,6 +1,4 @@
 import os
-import math
-import re
 from collections import defaultdict
 
 if "bpy" in locals():
@@ -26,6 +24,8 @@ from . import camera
 
 def apply_fog_dome(input_xml, output_xml, target_visibility=0.2):
     import mitsuba
+    import math
+    import re
     print(f"Evaluating scene geometry: {input_xml} ...")
     
     # Determine scene bounds
