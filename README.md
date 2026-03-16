@@ -4,13 +4,15 @@
 
 This add-on integrates the Mitsuba renderer into Blender with extended features.
 
+[![workflow](res/blender_workflow.png)](./README.md)
+
 ## Main Features
 
 * **Mitsuba scene import**: Import Mitsuba XML scenes and YML scene descriptions in Blender to edit and preview them. Materials are converted to Cycles shader node trees. Mark textures and cameras for use in downstream optimization. 
 
-* **Mitsuba scene export**: Export a Blender scene to a Mitsuba XML scene for rendering. Optionally export with auxiliary information (e.g. marked textures and cameras) YML file for downstream use.
+* **Mitsuba scene export**: Export a Blender scene to a Mitsuba XML scene for rendering. Optionally export with auxiliary information (e.g. marked textures and cameras) YML file for downstream optimization use.
 
-More in-depth information about the features of the original Mitsuba Blender add-on are available on the [wiki](https://github.com/mitsuba-renderer/mitsuba-blender/wiki). Additional features as part of Mitsuba Blender+ are described in "New Custom Features" section below.
+More in-depth information about the features of the original Mitsuba Blender add-on are available on the [wiki](https://github.com/mitsuba-renderer/mitsuba-blender/wiki). Additional features as part of Mitsuba Blender+ are described in "New Custom Features" section below. Watch a tutorial using features of this plugin for setting up a scene for texture optimization [here](https://drive.google.com/file/d/1GDpEEaQ0feHX4Sgei_r6LiA3i33zxK35/view?usp=sharing).
 
 ## Installation
 
@@ -49,32 +51,47 @@ Launch Blender from the console in order to see any logged error messages.
 ### Supported versions
 
 Blender version should be at least `2.93`. The addon has been extensively tested
-on LTS versions of blender (`3.6`, `4.2`). **We recommend using 4.2** whenever
+on LTS versions of blender `4.2`, so **we recommend using 4.2** whenever
 possible.
 
-# Blender-Mitsuba+ Custom Features
+# Blender-Mitsuba+ Custom User Features
 ## Installation
-Follow the Mitsuba-Blender+ (Live Development Installation) instructions above.
+Follow the Mitsuba-Blender+ instructions above.
 
 ## Custom Import: Import YML Configs
 Usage: Menu option `File -> Import -> Custom Config (.yml)`
 
 This option allows for importing predefined scene descriptions into Blender. On import, will wipe everything in the current open workspace and replace it with the config contents.
 
-Supports primitive objects, color and image bitmap textures, textured meshes (from obj, stl, ply, fbx file format), environmental maps, lighting, cameras. See `.yml` files in https://github.com/twosixlabs/gard-mit/tree/renderer_nn_module/configs for example configs. 
+Supports primitive objects, color and image bitmap textures, textured meshes (from obj, stl, ply, fbx file format), environmental maps, [RealSky](https://blender-addons.org/real-sky/) backgrounds, fog volumetric effects (only visible via Mitsuba), lighting, cameras. See `.yml` files in https://github.com/twosixlabs/gard-mit/tree/renderer_nn_module/configs/template_config.yml for full features.
+
  
 ## Custom Export: Export to Mitsuba WITH Auxiliary Optimization Information
 Usage: Menu option `File -> Export -> Mitsuba (.xml) with Aux Data (.yml)`
 
-This export option extends the base plugin's Export to Mitsuba feature (`File -> Export -> Mitsuba (.xml)`) by exporting an additional `auxiliary_outputs.yml` file in the same directory as the rest of the scene export. THis file records exportable optimization parameters (currently supports cameras and textures). 
+This export option extends the base plugin's Export to Mitsuba feature (`File -> Export -> Mitsuba (.xml)`) by exporting an additional `auxiliary_outputs.yml` file in the same directory as the rest of the scene export. 
 
-When exporting with the `File -> Export -> Mitsuba (.xml) with Aux Data (.yml)` option, the objects marked as optimizable will be saved into an `auxiliary_outputs.yml` which can be processed downstream by our custom [Differential Renderer module](https://github.com/twosixlabs/gard-mit/blob/renderer_nn_module/src/renderer_module.py).
+The export structure in total creates the following files in the same directory that the scene description XML is saved to:
+- `textures/` folder of scene textures
+- `meshes/` folder of scene meshes
+- `scene.xml` Mitsuba scene description
+- `auxiliary_outputs.yml` Additional optimization data
+
+This `auxiliary_outputs.yml` file records exportable optimization parameters (currently supports cameras and textures). 
+
+If the scene uses a background based off the [RealSky plugin](https://blender-addons.org/real-sky/), the background will automatically be baked into an HDRI image, and this HDRI image will be set as the background environment texture in place of the RealSky background node in order to be compatible with the Mitsuba export.
+
+If the scene was created from a config with the fog volumetric effect specified, the fog (implemented as a homogenous medium) encompassing the entire scene will be added to the mitsuba scene description on export.
+
+When exporting with the `File -> Export -> Mitsuba (.xml) with Aux Data (.yml)` option, the objects marked as optimizable will be saved into `auxiliary_outputs.yml` which can be processed downstream by our custom [Differential Renderer module](https://github.com/twosixlabs/gard-mit/blob/renderer_nn_module/src/renderer_module.py).
+
+
 
 
 ## Marking scene parameters as optimizable
 Currently the plugin supports marking object materials and camaeras for downstream optimizations, e.g. to optimize a patch texture or whether to use a camera or not in a multi-view optimization. 
 
-* To mark as texture or camera as optimizable on import via yml config, add the line
+* To mark as texture or camera as optimizable on import via yml config (see `template_config.yml` found [here](https://drive.google.com/file/d/1FM09B6jr_CFfoA18rBUY0ME7n8tCtPge/view?usp=sharing) or in gard-mit repo), add the line
 
 ```optimizable: true``` 
 
